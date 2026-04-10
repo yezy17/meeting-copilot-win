@@ -4,6 +4,8 @@ Windows 实时会议字幕工具 — 本地语音识别 + 中文翻译。
 
 抓取系统音频（Teams / Zoom / Google Meet 等），用本地 Whisper 模型实时转写英文，再通过 OpenAI API 翻译成中文，以左右双栏悬浮窗显示。
 
+![screenshot](pics/screenshot.png)
+
 ## 功能
 
 - **本地语音识别** — 使用 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) 在本地 GPU 上运行，零网络延迟，逐词实时显示
