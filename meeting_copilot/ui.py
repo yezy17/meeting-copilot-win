@@ -321,19 +321,19 @@ class MainWindow(QMainWindow):
         )
 
     def _should_merge(self, group: dict, segment: TranscriptSegment) -> bool:
-        if len(group["segment_ids"]) >= 5:
+        if len(group["segment_ids"]) >= 3:
             return False
         last_seg = self._segments_by_id.get(group["segment_ids"][-1])
         if last_seg:
             gap = (segment.timestamp - last_seg.timestamp).total_seconds()
-            if gap > 5:
+            if gap > 3:
                 return False
         total_eng = sum(
             len(self._segments_by_id[sid].english)
             for sid in group["segment_ids"]
             if sid in self._segments_by_id
         )
-        if total_eng + len(segment.english.strip()) > 400:
+        if total_eng + len(segment.english.strip()) > 200:
             return False
         return True
 
@@ -362,17 +362,17 @@ class MainWindow(QMainWindow):
 
             rows.append(
                 "<tr>"
-                f"<td class='eng-col' valign='top'>"
+                f"<td width='50%' valign='top' style='padding:4px 10px 4px 0; border-right:1px solid rgba(255,255,255,18);'>"
                 f"<div class='timestamp'>{html.escape(stamp)}</div>"
                 f"<div class='english'>{html.escape(english)}</div>"
                 "</td>"
-                f"<td class='chn-col' valign='top'>"
+                f"<td width='50%' valign='top' style='padding:4px 0 4px 10px;'>"
                 f"<div class='chinese'>{html.escape(chinese)}</div>"
                 "</td>"
                 "</tr>"
             )
 
-        # Append LIVE row for partial English
+        # Append LIVE row for partial English (inside the table, scrollable)
         live_eng = self._current_partial_english
         if live_eng and self._segment_order:
             latest = self._segments_by_id.get(self._segment_order[-1])
@@ -389,22 +389,33 @@ class MainWindow(QMainWindow):
             )
             rows.append(
                 "<tr>"
-                f"<td class='eng-col' valign='top'>"
+                f"<td width='50%' valign='top' style='padding:4px 10px 4px 0; border-right:1px solid rgba(255,255,255,18);'>"
                 f"<div class='english'>{badge}{html.escape(live_eng)}</div>"
                 "</td>"
-                "<td class='chn-col' valign='top'></td>"
+                "<td width='50%' valign='top' style='padding:4px 0 4px 10px;'>"
+                "<div class='chinese' style='color:rgba(180,200,220,80);'>...</div>"
+                "</td>"
                 "</tr>"
             )
 
-        if rows:
-            body = f"<table class='bilingual' cellpadding='0' cellspacing='0'>{''.join(rows)}</table>"
-        else:
-            body = (
-                "<div class='placeholder'>"
-                "左侧实时英文原文 | 右侧中文翻译<br>"
-                "点击 Start 开始监听系统音频。"
-                "</div>"
+        # Always use two-column table (even for placeholder)
+        colgroup = "<colgroup><col width='50%'/><col width='50%'/></colgroup>"
+        if not rows:
+            rows.append(
+                "<tr>"
+                "<td width='50%' valign='top' style='padding:12px 10px 12px 0; border-right:1px solid rgba(255,255,255,18);'>"
+                "<div class='placeholder'>英文原文将在此实时显示</div>"
+                "</td>"
+                "<td width='50%' valign='top' style='padding:12px 0 12px 10px;'>"
+                "<div class='placeholder'>中文翻译</div>"
+                "</td>"
+                "</tr>"
             )
+
+        body = (
+            f"<table width='100%' cellpadding='0' cellspacing='0' "
+            f"style='table-layout:fixed;'>{colgroup}{''.join(rows)}</table>"
+        )
 
         if body == self._history_html_cache:
             return
@@ -412,14 +423,18 @@ class MainWindow(QMainWindow):
 
         sb = self.history_view.verticalScrollBar()
         was_at_bottom = sb.value() >= sb.maximum() - 30
+        old_scroll = sb.value()
 
         self.history_view.setUpdatesEnabled(False)
         self.history_view.setHtml(self._wrap_html(body))
         self.history_view.setUpdatesEnabled(True)
 
+        sb = self.history_view.verticalScrollBar()
         if was_at_bottom:
-            sb = self.history_view.verticalScrollBar()
             sb.setValue(sb.maximum())
+        else:
+            # User scrolled up — restore their position, don't jump
+            sb.setValue(min(old_scroll, sb.maximum()))
 
     @staticmethod
     def _join_eng(parts: list[str]) -> str:
@@ -683,13 +698,8 @@ class MainWindow(QMainWindow):
             color: rgba(246,248,251,126); line-height: 1.4; padding: 12px 0;
             text-align: center;
         }}
-        table.bilingual {{ width: 100%; border-collapse: collapse; }}
-        table.bilingual td {{ padding: 4px 0; }}
-        td.eng-col {{
-            width: 50%; padding-right: 10px;
-            border-right: 1px solid rgba(255,255,255,18);
-        }}
-        td.chn-col {{ width: 50%; padding-left: 10px; }}
+        table {{ width: 100%; border-collapse: collapse; table-layout: fixed; }}
+        td {{ word-wrap: break-word; overflow-wrap: break-word; }}
         .timestamp {{
             color: rgba(255,255,255,80); font-size: 10px;
             line-height: 1.2; margin: 0 0 1px 0;

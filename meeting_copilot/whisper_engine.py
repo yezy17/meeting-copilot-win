@@ -28,9 +28,9 @@ class WhisperStreamEngine:
         device: str = "cuda",
         language: str = "en",
         energy_threshold: float = 300.0,
-        silence_ms: int = 600,
+        silence_ms: int = 500,
         partial_interval_ms: int = 300,
-        max_speech_s: float = 30.0,
+        max_speech_s: float = 10.0,
     ) -> None:
         self._model_size = model_size
         self._device = device

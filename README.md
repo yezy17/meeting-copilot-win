@@ -1,106 +1,111 @@
-# Meeting Copilot MVP
+# Meeting Copilot
 
-一个面向 Windows 11 的会议辅助工具原型：
+Windows 实时会议字幕工具 — 本地语音识别 + 中文翻译。
 
-- 实时抓取系统播放音频，也就是 Teams / Google Meet / Zoom 里你耳机正在听到的内容
-- 用 OpenAI Realtime API 做英文实时转写
-- 用文本模型把会议内容增量翻译成中文
-- 用桌面悬浮窗显示英文和中文
-- 会议结束后生成中文摘要、行动项和建议追问
+抓取系统音频（Teams / Zoom / Google Meet 等），用本地 Whisper 模型实时转写英文，再通过 OpenAI API 翻译成中文，以左右双栏悬浮窗显示。
 
-这个版本优先做成一个可运行的 MVP，而不是一次性把所有功能都堆满。
+## 功能
 
-## 当前能力
+- **本地语音识别** — 使用 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) 在本地 GPU 上运行，零网络延迟，逐词实时显示
+- **中文翻译** — 句子完成后通过 OpenAI API 自动翻译，左右双栏对照显示
+- **系统音频采集** — 通过 WASAPI loopback 捕获系统播放的音频，无需额外虚拟音频设备
+- **悬浮窗** — 始终置顶的半透明窗口，可拖动、可调整大小，开会时放在屏幕边缘
+- **会议助手** — 一键生成会议摘要、行动项和建议追问
+- **保存记录** — 导出完整的双语会议记录为 Markdown 文件
 
-- 默认采集 Windows 默认输出设备的 WASAPI loopback 音频
-- 使用 `gpt-4o-mini-transcribe` 做低延迟转写
-- 使用 `gpt-4.1-nano` 做更快的中文翻译，`gpt-5.4-mini` 做会议总结
-- `Live Chinese Preview` 会先给出可被修正的实时预览，`Stable Chinese Timeline` 再记录更稳定的正式字幕
-- 始终置顶窗口，适合开会时放在旁边
-- 支持清空、停止、生成摘要
+## 系统要求
 
-## 运行方式
+- Windows 10/11
+- Python 3.10+
+- NVIDIA GPU（推荐，用于 Whisper 加速；无 GPU 也可用 CPU 模式）
+- OpenAI API Key（用于翻译和会议摘要）
 
-### 方案 A：`.venv`
+## 安装
 
 ```powershell
+# 克隆仓库
+git clone https://github.com/YOUR_USERNAME/meeting-copilot-win.git
+cd meeting-copilot-win
+
+# 创建虚拟环境并安装依赖
 python -m venv .venv
 .\.venv\Scripts\activate
-python -m pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --index-url https://pypi.org/simple -r requirements.txt
+pip install -r requirements.txt
+
+# 复制配置模板并填入 API Key
 Copy-Item .env.example .env
+# 编辑 .env，填入你的 OPENAI_API_KEY
+```
+
+> 首次运行时会自动从 Hugging Face 下载 Whisper 模型（large-v3 约 3GB），之后缓存在本地。
+
+## 使用
+
+```powershell
+.\.venv\Scripts\activate
 python main.py
 ```
 
-### 方案 B：`conda`
+1. 点击 **Start** 开始监听系统音频
+2. 播放英文音频或加入会议
+3. 左侧实时显示英文转写，右侧显示中文翻译
+4. 点击 **Summary** 生成会议摘要，**Save** 保存记录
 
-```powershell
-conda env create -f environment.yml
-conda activate meeting-copilot
-Copy-Item .env.example .env
-python main.py
-```
-
-如果你的公司网络会拦截证书，`pip` 可能需要额外加 `--trusted-host`。
-
-## 配置
-
-先复制配置模板：
-
-```powershell
-Copy-Item .env.example .env
-```
-
-然后至少填写：
-
-```env
-OPENAI_API_KEY=your_key_here
-```
-
-可选项：
-
-- `TRANSCRIPTION_MODEL`：默认 `gpt-4o-mini-transcribe`，更省钱更快
-- `TRANSLATION_MODEL`：默认 `gpt-4.1-nano`，优先低延迟
-- `SUMMARY_MODEL`：默认 `gpt-5.4-mini`
-- `LOOPBACK_DEVICE_INDEX`：如果默认输出设备不是你开会的设备，可以手动指定
-
-如果你想先看看当前机器有哪些 loopback 设备：
+### 查看可用音频设备
 
 ```powershell
 python main.py --list-devices
 ```
 
+如果默认设备不对，在 `.env` 中设置 `LOOPBACK_DEVICE_INDEX=设备编号`。
+
+## 配置
+
+编辑 `.env` 文件：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `OPENAI_API_KEY` | *(必填)* | OpenAI API 密钥 |
+| `WHISPER_MODEL_SIZE` | `large-v3` | Whisper 模型：`tiny` / `base` / `small` / `medium` / `large-v3` |
+| `WHISPER_DEVICE` | `cuda` | 推理设备：`cuda`（GPU）或 `cpu` |
+| `WHISPER_ENERGY_THRESHOLD` | `300` | 语音活动检测阈值，环境嘈杂时调高 |
+| `TRANSLATION_MODEL` | `gpt-4.1-nano` | 翻译模型 |
+| `SUMMARY_MODEL` | `gpt-5.4-mini` | 摘要模型 |
+| `SOURCE_LANGUAGE` | `en` | 音频语言 |
+| `TARGET_LANGUAGE` | `zh-CN` | 翻译目标语言 |
+| `LOOPBACK_DEVICE_INDEX` | *(自动)* | 指定音频采集设备编号 |
+| `AUDIO_CHUNK_MS` | `120` | 音频缓冲区大小（ms） |
+
 ## 项目结构
 
-```text
-main.py
+```
+main.py                         # 入口，CUDA DLL 路径设置
 meeting_copilot/
-  audio.py
-  config.py
-  controller.py
-  llm.py
-  models.py
-  realtime.py
-  ui.py
+  audio.py                      # WASAPI loopback 音频采集
+  whisper_engine.py              # 本地 Whisper 流式语音识别引擎
+  controller.py                  # 业务逻辑：音频 → 识别 → 翻译
+  llm.py                         # OpenAI API 翻译和摘要服务
+  models.py                      # 数据模型
+  config.py                      # 配置加载
+  ui.py                          # PySide6 桌面 UI
 ```
 
-## 这版的取舍
+## 架构
 
-- 先做“稳定按句翻译”，而不是逐词翻译，减少字幕抖动
-- 先默认只采集系统播放音频，不把你的麦克风发言混进来
-- 先使用 PySide6 做桌面窗体，后面如果要做系统托盘、全局热键、自动导出，再往上加
-- 当前按 Realtime 回来的完成事件顺序展示，后续可以补更严格的 turn 排序
+```
+系统音频 (WASAPI loopback)
+    ↓
+音频采集线程 (16kHz mono PCM)
+    ↓
+Whisper 处理线程 (本地 GPU)
+    ├→ 每 300ms 输出 partial → 左栏实时英文 [LIVE]
+    └→ 静默检测后输出 final → 左栏确认英文
+                                    ↓
+                            OpenAI 翻译 API
+                                    ↓
+                              右栏中文翻译
+```
 
-## 下一步建议
+## 许可
 
-1. 增加麦克风通道，把“别人说的话”和“我说的话”分成双轨。
-2. 做术语表和公司名词词典，降低缩写误识别。
-3. 增加“帮我想追问”面板。
-4. 做会议结束后的 Markdown 导出。
-5. 做系统托盘、全局快捷键和自动复制最近 5 分钟内容。
-
-## 官方参考
-
-- OpenAI Realtime transcription: <https://developers.openai.com/api/docs/guides/realtime-transcription>
-- OpenAI Realtime WebSocket: <https://developers.openai.com/api/docs/guides/realtime-websocket>
-- OpenAI Models: <https://developers.openai.com/api/docs/models>
-- Microsoft WASAPI loopback recording: <https://learn.microsoft.com/en-us/windows/win32/coreaudio/loopback-recording>
+MIT

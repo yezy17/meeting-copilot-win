@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import AsyncIterator, Iterable
+from typing import Iterable
 
 from openai import AsyncOpenAI
 
@@ -40,27 +40,6 @@ class TranslatorService:
         )
         return (response.output_text or "").strip()
 
-    async def stream_live_translation(
-        self,
-        english_text: str,
-    ) -> AsyncIterator[str]:
-        if not english_text.strip():
-            return
-
-        async with self._client.responses.stream(
-            model=self._model,
-            instructions=(
-                "You are a low-latency meeting interpreter. Translate the partial English "
-                f"transcript into natural {self._target_language}. The input may be an "
-                "unfinished sentence. Output Chinese only, keep it short, and do not repeat "
-                "the original English."
-            ),
-            input=english_text,
-            max_output_tokens=80,
-        ) as stream:
-            async for event in stream:
-                if event.type == "response.output_text.delta":
-                    yield event.delta
 
 
 class MeetingAssistantService:

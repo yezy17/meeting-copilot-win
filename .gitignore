@@ -7,4 +7,9 @@ __pycache__/
 .pytest_cache/
 dist/
 build/
-
+*.egg-info/
+meeting_records/
+*.log
+.DS_Store
+.idea/
+.vscode/
