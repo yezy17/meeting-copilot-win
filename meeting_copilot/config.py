@@ -21,6 +21,9 @@ class AppConfig:
     target_language: str
     audio_chunk_ms: int
     loopback_device_index: Optional[int]
+    whisper_model_size: str
+    whisper_device: str
+    whisper_energy_threshold: float
 
 
 def _parse_optional_int(value: str) -> Optional[int]:
@@ -39,4 +42,7 @@ def load_config() -> AppConfig:
         target_language=os.getenv("TARGET_LANGUAGE", "zh-CN").strip(),
         audio_chunk_ms=max(80, int(os.getenv("AUDIO_CHUNK_MS", "120").strip())),
         loopback_device_index=_parse_optional_int(os.getenv("LOOPBACK_DEVICE_INDEX", "")),
+        whisper_model_size=os.getenv("WHISPER_MODEL_SIZE", "large-v3").strip(),
+        whisper_device=os.getenv("WHISPER_DEVICE", "cuda").strip(),
+        whisper_energy_threshold=float(os.getenv("WHISPER_ENERGY_THRESHOLD", "300").strip()),
     )

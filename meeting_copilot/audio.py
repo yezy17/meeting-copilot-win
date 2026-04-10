@@ -8,7 +8,7 @@ import numpy as np
 import pyaudiowpatch as pyaudio
 
 
-TARGET_SAMPLE_RATE = 24_000
+TARGET_SAMPLE_RATE = 16_000
 
 
 class LoopbackAudioError(RuntimeError):
