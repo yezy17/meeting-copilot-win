@@ -1,0 +1,2 @@
+"""Meeting Copilot MVP."""
+
